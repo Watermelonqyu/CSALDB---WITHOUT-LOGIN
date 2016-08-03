@@ -1,4 +1,5 @@
 ﻿@using CSALMongoWebAPI.Util
+@using CSALMongo.Model
 
 @{
     ViewBag.Title = "Student " + Model.Student.UserID;
@@ -32,42 +33,44 @@
                         <th><span class="has-tooltip" data-toggle="tooltip" data-placement="top" title="Based on each student's last attempt">Score</span></th>
                         <th><span class="has-tooltip" data-toggle="tooltip" data-placement="top" title="Based on each student's last attempt">Total time</span></th>
                         <th><span class="has-tooltip" data-toggle="tooltip" data-placement="top" title="Based on each student's last attempt">Reading time</span></th>
-                        <th><span class="has-tooltip" data-toggle="tooltip" data-placement="top" title="Based on each student's last attempt">Lesson Path</span></th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach (var lesson in Model.Turns) {
+                    @foreach (var lesson in Model.Turns)
+                    {
                         string lessonID = lesson.LessonID;
                         string lessonName;
-                        if (!Model.LessonLookup.TryGetValue(lessonID, out lessonName)) {
+                        if (!Model.LessonLookup.TryGetValue(lessonID, out lessonName))
+                        {
                             lessonName = lessonID;
                         }
 
-                        double correctRate = lesson.AdhocCorrectAnswerRate(0, lesson.TurnCount - 2, double.NaN);
+                        double correctRate = lesson.AdhocCorrectAnswerRate(0, lesson.TurnCount - 1, double.NaN);
 
                         var lessonUrl = RenderHelp.URIEncode(lessonID);
                         var userUrl = RenderHelp.URIEncode(lesson.UserID);
 
                         var lastTurnTime = lesson.LastTurnTime;
-                        if (lastTurnTime != null) {
+                        if (lastTurnTime != null)
+                        {
                             lastTurnTime = lastTurnTime.ToLocalTime();
                         }
-                        
+
                         <tr>
-                            <td class="nw"><a href="~/home/lessondetails/@lessonUrl" class="lesson-link">@lessonName</a></td>
+                            <td class="nw">@lessonName</td>
                             <td class="nw">@lastTurnTime</td>
                             <td>@lesson.Attempts</td>
                             <td>
                                 @lesson.Completions
-                                @if (lesson.LastCompleted()) {
+                                @if (lesson.LastCompleted())
+                                {
                                     <span class="glyphicon glyphicon-ok"></span>
                                 }
                             </td>
                             <td class="correct-cell det-link" data-user="@userUrl" data-lesson="@lessonUrl">@correctRate</td>
                             <td class="nw">@RenderHelp.HumanDuration(lesson.CurrentTotalTime())</td>
                             <td class="nw">@RenderHelp.HumanDuration(lesson.CurrentReadingTime())</td>
-                            <td class="path-cell nw">@lesson.CurrentLessonPath()</td>
-                        </tr>                        
+                        </tr>
                     }
                 </tbody>
             </table>

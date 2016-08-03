@@ -34,6 +34,8 @@ namespace CSALMongoWebAPI.Controllers {
         protected LessonsController lessonsCtrl;
         protected StudentsController studentsCtrl;
         protected List<String> adminEmails;
+        protected string teacherEmail;
+        protected string studentID;
 
         public ClassesController ClassesCtrl {
             set {
@@ -73,9 +75,63 @@ namespace CSALMongoWebAPI.Controllers {
             return Session["UserEmail"] as string;
         }
 
+        // added by Qiong
+        public ActionResult TeachersClasses(string id)
+        {
+            Session["UserEmail"] = id;
+            Session["UserName"] = "CSAL User";
+            Session["IsAdmin"] = false;
+            teacherEmail = id;
+            var classes = new List<Class>();
+            //Only classes we're allowed to see
+            foreach (Class cls in ClassesCtrl.Get())
+            {
+                if (cls.IsATeacher(id))
+                {
+                    classes.Add(cls);
+                }
+            }
+            return View("Classes", classes);
+        }
+
+
+        // added by Qiong
+        public ActionResult StudentPerformance(string id)
+        {
+            Session["UserEmail"] = id;
+            Session["UserName"] = "CSAL User";
+            Session["IsAdmin"] = true;
+            //Make it easy on the template and always have a reading
+            //list (even if it's empty)
+            var student = StudentsCtrl.Get(id);
+            if (student == null)
+            {
+                return new HttpNotFoundResult();
+            }
+
+            if (student.ReadingURLs == null)
+            {
+                student.ReadingURLs = new List<MediaVisit>();
+            }
+
+            var studentTurns = StudentsCtrl.DBConn().FindTurns(null, student.UserID);
+
+            var modelObj = new ExpandoObject();
+            var modelDict = (IDictionary<string, object>)modelObj;
+            modelDict["Student"] = student;
+            modelDict["Turns"] = studentTurns;
+            modelDict["LessonLookup"] = StudentsCtrl.DBConn().FindLessonNames();
+
+            return View("StudentDetail", modelObj);
+        }
+
         protected bool NeedLogin() {
+            Session["UserEmail"] = "csal.user@invalid-domain.com";
+            Session["UserName"] = "CSAL User";
+            Session["IsAdmin"] = false; 
             //We require a user email
-            return String.IsNullOrWhiteSpace(CurrentUserEmail());
+            // return String.IsNullOrWhiteSpace(CurrentUserEmail());
+            return false;
         }
 
         protected bool IsAdmin() {
@@ -324,19 +380,22 @@ namespace CSALMongoWebAPI.Controllers {
                 return new HttpNotFoundResult();
             }
 
+            /*
             if (!IsAdmin()) {
-                if (!clazz.IsATeacher(CurrentUserEmail())) {
+                if (!clazz.IsATeacher(teacherEmail)) {
                     //Don't have rights to this class
                     return RedirectToAction("Classes");
                 }
             }
+             * */
 
             //Don't allow null lists
-            if (clazz.Lessons == null)
-                clazz.Lessons = new List<string>();
+            if (clazz.Lessons == null) 
+                return ErrorView("There is no LESSON in the class yet!");
             if (clazz.Students == null)
-                clazz.Students = new List<string>();
+                return ErrorView("There is no STUDENT in the class yet!");
 
+            /*
             //SPECIAL: if this is a memphis class with test in the name, we do some filtering
             if (clazz.Location.ToLower().Contains("memphis") && clazz.ClassID.ToLower().Contains("test")) {
                 //No carl, test, or non-alpha students then...
@@ -352,7 +411,7 @@ namespace CSALMongoWebAPI.Controllers {
                 var lessonMatch = new System.Text.RegularExpressions.Regex("lesson[0-9]+");
                 clazz.Lessons = clazz.Lessons.Where(l => lessonMatch.IsMatch(l)).ToList();
             }
-
+            */
             //Sort info in the class for display purposes
             //Students are easy to sort, but we need a special sort for lessons
             clazz.Lessons = clazz.Lessons.OrderBy(x => Utils.LessonIDSort(x)).ToList();
@@ -364,6 +423,10 @@ namespace CSALMongoWebAPI.Controllers {
             //Make dictionary of lesson:user 
             var lookup = new Dictionary<Tuple<string, string>, StudentLessonActs>();
             if (lessons.Count > 0 && students.Count > 0) {
+                if (LessonsCtrl.DBConn().FindTurnsForStudents(students) == null)
+                {
+                    return ErrorView("No student has take any lesson yet!");
+                }
                 foreach (var turns in LessonsCtrl.DBConn().FindTurnsForStudents(students)) {
                     if (!students.Contains(turns.UserID) || !lessons.Contains(turns.LessonID)) {
                         continue; //Nope
@@ -371,6 +434,10 @@ namespace CSALMongoWebAPI.Controllers {
 
                     var key = new Tuple<string, string>(turns.LessonID, turns.UserID);
                     lookup[key] = turns;
+                }
+                if (lookup == null)
+                {
+                    return ErrorView("No student has take any lesson yet!");
                 }
             }
 

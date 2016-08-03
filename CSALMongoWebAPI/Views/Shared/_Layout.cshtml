@@ -23,6 +23,10 @@
             color: #3955A1;
         }
 
+        .goBack {
+            color: white;
+            vertical-align: middle;
+        }
         /* Useful class for making sure that the mouse pointer changes over
            clickable things: use by adding the class hover-restore */
         .hover-restore:hover {
@@ -48,7 +52,8 @@
 
     <!-- HEADER/NAVBAR -->
     <nav class="navbar navbar-default" role="navigation">
-        <div class="container-fluid">
+        <a class ="goBack" href="javascript:history.back()">Go Back</a>
+        <div class="container-fluid" hidden>
             <!-- Brand and toggle get grouped for better mobile display -->
             <div class="navbar-header">
                 <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#main-navbar-collapse-1">
@@ -59,7 +64,7 @@
                 </button>
                 @Html.ActionLink("CSAL Teachers' View", "Index", "Home", new { area = "" }, new { @class = "navbar-brand" })
             </div>
-
+            
             <!-- Collect the nav links, forms, and other content for toggling -->
             @{
                 string controller = ViewContext.RouteData.Values["controller"].ToString().ToLower();
@@ -79,10 +84,17 @@
 
                 <ul class="nav navbar-nav navbar-right">
                     @{
-                        var dispEmail = Session["UserEmail"].ToString();
-                        if ((bool)Session["IsAdmin"]) { 
-                            dispEmail += " (ADMIN)";
-                        }
+                       var dispEmail = " ";
+                       if(Session["UserEmail"] == null) {
+                           dispEmail = "Teacher";
+                       }
+                       else {
+                            dispEmail = Session["UserEmail"].ToString();
+                            if ((bool)Session["IsAdmin"])
+                            {
+                                dispEmail += " (ADMIN)";
+                            }
+                       }
                     }
                     <li>@Html.ActionLink(dispEmail, "Index", "Home", new { area = "" }, null)</li>
                 </ul>
@@ -156,8 +168,10 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-default" data-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary turn-detail-action" data-user="" data-lesson="" id="turnDetailDlgViewUser">User</button>
-                    <button type="button" class="btn btn-primary turn-detail-action" data-user="" data-lesson="" id="turnDetailDlgViewLesson">Lesson</button>
-                    <button type="button" class="btn btn-primary turn-detail-action" data-user="" data-lesson="" id="turnDetailDlgViewTranscript">User-Lesson Details</button>
+                    <!--
+                    <button hidden type="button" class="btn btn-primary turn-detail-action" data-user="" data-lesson="" id="turnDetailDlgViewLesson">Lesson</button>
+                    <button hidden type="button" class="btn btn-primary turn-detail-action" data-user="" data-lesson="" id="turnDetailDlgViewTranscript">User-Lesson Details</button>
+                    -->
                     @if ((bool)Session["IsAdmin"]) {
                         <button type="button" class="btn btn-success turn-detail-action" data-user="" data-lesson="" id="turnDetailDlgViewDebug">Debug View</button>
                     }
@@ -166,8 +180,13 @@
         </div>
     </div>
     <script>
+        
+        
         $('#turnDetailDlg').modal('hide');
 
+        $('goback').click(function() {
+            history.go(-1);
+        });
         $("#turnDetailDlgViewUser").click(function (evt) {
             evt.preventDefault();
             $('#turnDetailDlg').modal('hide');
